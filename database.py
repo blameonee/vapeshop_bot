@@ -39,3 +39,11 @@ async def check_or_add_user(tg_id: int,username: str, full_name: str):
             )
             await db.commit() #это как обычный коммит - сохранение изменений в БД
             return True #пользователь новый
+        
+async def get_user_balance(tg_id: int):
+    async with aiosqlite.connect("vape_shop.db") as db:
+        cursor = await db.execute("SELECT balance FROM users WHERE tg_id = ?",(tg_id,))
+        result = cursor.fetchone()
+        if result:
+            return result[0]
+        return 0

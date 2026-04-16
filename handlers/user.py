@@ -26,8 +26,8 @@ async def startt(message: types.Message):
     if is_new_user:
         await message.answer(
             f"Рады видеть тебя в нашем вейп-шопе💨, {message.from_user.full_name}!\n"
-            f"Лови на свой баланс 100 бонусов💯"
-            f"В нашей системе лояльности 1 бонус = 1 рубль😊"
+            f"Лови на свой баланс 100 бонусов💯\n"
+            f"В нашей системе лояльности 1 бонус = 1 рубль😊\n"
         )
     else:
         await message.answer(f"С возвращением, {message.from_user.first_name}! Рады тебя снова видеть. 👋")
@@ -90,3 +90,10 @@ async def news(message: types.Message):
         caption=caption, # Указываем текст
         parse_mode="HTML",
     )
+
+from database import get_user_balance
+@user_router.message(F.text == "Мои бонусы")
+async def my_balance(message:types.Message):
+    user_id = message.from_user.id
+    user_balance = await get_user_balance(user_id)
+    await message.answer(f"{message.from_user.first_name}, на вашем балансе сейчас {user_balance} бонусов!")
