@@ -13,11 +13,14 @@ from handlers.user import user_router
 from handlers.admin import admin_router
 #from database import init_db
 
+from database import init_db
+
 # Загружаем переменные из .env
 load_dotenv()
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 
 async def main():
+
     # Настраиваем логирование (чтобы видеть ошибки в консоли)
     logging.basicConfig(
         level=logging.INFO,
@@ -40,6 +43,7 @@ async def main():
 
     try:
         logging.info("Бот для Vape Shop запущен!")
+        await init_db() #Сначала обязательно идет инициализация БД
         await dp.start_polling(bot)
     except Exception as e:
         logging.error(f"Критическая ошибка при работе: {e}")

@@ -1,18 +1,26 @@
-import aiosqlite 
+import aiosqlite
 import asyncio
 
 async def init_db():
-    async with aiosqlite.connect("vape_shop.db") as db:
-        await db.execute("""
-                         CREATE TABLE IF NOT EXISTS users (
-                tg_id INTEGER PRIMARY KEY,   -- ID из Телеграма (уникальный)
-                username TEXT,               -- Юзернейм (@name)
-                full_name TEXT,              -- Имя из профиля
-                balance INTEGER DEFAULT 0,   -- Бонусы (по умолчанию 0)
-                total_spent INTEGER DEFAULT 0 -- Всего потрачено (для уровней кешбэка)
-            )
-        """)
-        await db.commit()
+    try:
+        async with aiosqlite.connect("vape_shop.db") as db:
+            await db.execute("""
+                CREATE TABLE IF NOT EXISTS users (
+                    tg_id INTEGER PRIMARY KEY,
+                    username TEXT,
+                    full_name TEXT,
+                    balance INTEGER DEFAULT 0,
+                    total_spent INTEGER DEFAULT 0
+                )
+            """)
+            await db.commit()
+            print("✅ База данных успешно инициализирована")
+
+    except Exception as e:
+        print(f"❌ КРИТИЧЕСКАЯ ОШИБКА при запуске базы данных: {e}")
+        # Можно даже принудительно остановить программу,
+        # так как без базы бот работать не сможет
+        exit(1)
 
 if __name__ == "__main__":
     asyncio.run(init_db)
@@ -20,7 +28,7 @@ if __name__ == "__main__":
 
 async def check_or_add_user(tg_id: int,username: str, full_name: str):
     async with aiosqlite.connect("vape_shop.db") as db:
-        cursor = await db.execute("SELECT tg_id FROM users WHERE user_id = ?", (tg_id,))
+        cursor = await db.execute("SELECT tg_id FROM users WHERE tg_id = ?", (tg_id,))
         user = await cursor.fetchone()
         if user: #проверку пользовалетля в БД
             return False #пользователь есть
