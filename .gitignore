@@ -1,2 +1,4 @@
 .env
 vape_shop.db
+__pycache__/
+venv/git
