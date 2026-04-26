@@ -10,7 +10,9 @@ async def init_db():
                     username TEXT,
                     full_name TEXT,
                     balance INTEGER DEFAULT 0,
-                    total_spent INTEGER DEFAULT 0
+                    total_spent INTEGER DEFAULT 0,
+                    referred_by INTEGER
+                    
                 )
             """)
             await db.commit()
@@ -26,17 +28,27 @@ if __name__ == "__main__":
     asyncio.run(init_db)
 
 
-async def check_or_add_user(tg_id: int,username: str, full_name: str):
+async def check_or_add_user(tg_id: int,username: str, full_name: str,referrer_id:int = None):
     async with aiosqlite.connect("vape_shop.db") as db:
         cursor = await db.execute("SELECT tg_id FROM users WHERE tg_id = ?", (tg_id,))
         user = await cursor.fetchone()
         if user: #проверку пользовалетля в БД
             return False #пользователь есть
         else:
+            initial_balance = 100 
+            if referrer_id:
+                initial_balance += 50
+
+             
             await db.execute(
-                "INSERT INTO users (tg_id, username,full_name,balance) VALUES (?,?,?,?)", #Пользователя нет
-                (tg_id,username,full_name,100)
+                "INSERT INTO users (tg_id, username,full_name,balance,referred_by) VALUES (?,?,?,?,?)", #Пользователя нет
+                (tg_id,username,full_name,initial_balance,referrer_id)
             )
+            if referrer_id:
+                await db.execute(
+                    "UPDATE users SET balance = balance + 50 WHERE tg_id = ?",
+                    (referrer_id,)
+                )
             await db.commit() #это как обычный коммит - сохранение изменений в БД
             return True #пользователь новый
         

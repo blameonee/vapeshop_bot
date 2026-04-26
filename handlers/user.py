@@ -1,5 +1,5 @@
 from aiogram import Router, types, F
-from aiogram.filters import CommandStart, Command
+from aiogram.filters import CommandStart,CommandObject 
 from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
 
 from keyboards.reply import for_cmd_start
@@ -17,20 +17,47 @@ users_db = []
 
 from database import check_or_add_user #импорт нашей функции
 @user_router.message(CommandStart())
-async def startt(message: types.Message):
+async def startt(message: types.Message, command: CommandObject):
+    user_id = message.from_user.id
+    args = command.args
+    referrer_id = None
+    if args and args.isdigit():
+        potential_referrer = int(args)
+        if potential_referrer != user_id:
+            referrer_id = potential_referrer
+
     is_new_user = await check_or_add_user(
         tg_id= message.from_user.id,
         username= message.from_user.username,
-        full_name=message.from_user.full_name
+        full_name=message.from_user.full_name,
+        referrer_id=referrer_id
     )
     if is_new_user:
-        await message.answer(
+        welcome_text = (
             f"Рады видеть тебя в нашем вейп-шопе💨, {message.from_user.full_name}!\n"
             f"Лови на свой баланс 100 бонусов💯\n"
-            f"В нашей системе лояльности 1 бонус = 1 рубль😊\n"
         )
+
+        if referrer_id:
+            welcome_text += "🎁 Плюс еще +50 бонусов за переход по ссылке друга!\n"
+            
+        welcome_text += "В нашей системе лояльности 1 бонус = 1 рубль😊"
+        
+        await message.answer(welcome_text, reply_markup=for_cmd_start)
+        
+        # Опционально: уведомляем того, кто пригласил
+        if referrer_id:
+            try:
+                # Нам нужен доступ к объекту bot, чтобы отправить сообщение другому юзеру
+                await message.bot.send_message(
+                    referrer_id, 
+                    "🎉 По твоей ссылке пришел новый друг! Тебе начислено 50 бонусов."
+                )
+                
+            except Exception:
+                pass # Если юзер заблокировал бота, просто игнорируем
     else:
-        await message.answer(f"С возвращением, {message.from_user.first_name}! Рады тебя снова видеть. 👋")
+        await message.answer(f"С возвращением, {message.from_user.first_name}! 👋")
 
 @user_router.message(F.text == "Поддержка")
 async def supp(message : types.Message):
@@ -97,3 +124,16 @@ async def my_balance(message:types.Message):
     user_id = message.from_user.id
     user_balance = await get_user_balance(user_id)
     await message.answer(f"{message.from_user.first_name}, на вашем балансе сейчас {user_balance} бонусов!")
+
+@user_router.message(F.text == "Приведи друга")
+async def invite_friend(message: types.Message):
+    user_id = message.from_user.id
+    reflink = f"https://t.me/vapeshooops_bot?start={user_id}"
+    text = (
+        "<b>🤝 Программа «Приведи друга»</b>\n\n"
+        "Отправь свою уникальную ссылку другу, и когда он зарегистрируется, "
+        "вы <b>оба</b> получите по 50 бонусов на баланс! 🎁\n\n"
+        f"Твоя ссылка:\n<code>{reflink}</code>\n\n"
+        "<i>Нажми на ссылку, чтобы скопировать её.</i>"
+    )
+    await message.answer(text, parse_mode="HTML")
