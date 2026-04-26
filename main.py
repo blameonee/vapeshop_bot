@@ -8,14 +8,13 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.client.session.aiohttp import AiohttpSession
 
 
-# Импортируем твои будущие роутеры (обработчики)
 from handlers.user import user_router
 from handlers.admin import admin_router
-#from database import init_db
+
 
 from database import init_db
 
-# Загружаем переменные из .env
+
 load_dotenv()
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 
@@ -28,17 +27,14 @@ async def main():
     )
 
 
-
     session = AiohttpSession(proxy="http://proxy.server:3128")
     bot = Bot(token=BOT_TOKEN, session=session)
     dp = Dispatcher(storage=MemoryStorage())
 
-    # Регистрируем роутеры
     # Важно: admin_router обычно ставим выше, чтобы команды админа не перехватывались юзерскими
     dp.include_router(admin_router)
     dp.include_router(user_router)
 
-    # Удаляем вебхуки и запускаем чистый поллинг
     await bot.delete_webhook(drop_pending_updates=True)
 
     try:
@@ -49,6 +45,7 @@ async def main():
         logging.error(f"Критическая ошибка при работе: {e}")
     finally:
         await bot.session.close()
+
 
 if __name__ == "__main__":
     try:

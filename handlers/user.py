@@ -1,3 +1,6 @@
+import os
+from dotenv import load_dotenv
+
 from aiogram import Router, types, F
 from aiogram.filters import CommandStart,CommandObject 
 from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
@@ -5,17 +8,24 @@ from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
 from keyboards.reply import for_cmd_start
 from keyboards.inline import for_cmd_ubout
 
+
 from aiogram.types import FSInputFile
 
-uz_admina = '@geopaoa'
 
+from database import check_or_add_user
+
+load_dotenv()
+
+UZ_ADMINA = os.getenv("ADMIN_USERNAME")
+START_BONUS = int(os.getenv("START_BONUS", 100)) 
+REFERRAL_BONUS = int(os.getenv("REFERRAL_BONUS", 50))
 
 user_router = Router()
 
 users_db = []
 
 
-from database import check_or_add_user #импорт нашей функции
+
 @user_router.message(CommandStart())
 async def startt(message: types.Message, command: CommandObject):
     user_id = message.from_user.id
@@ -35,11 +45,11 @@ async def startt(message: types.Message, command: CommandObject):
     if is_new_user:
         welcome_text = (
             f"Рады видеть тебя в нашем вейп-шопе💨, {message.from_user.full_name}!\n"
-            f"Лови на свой баланс 100 бонусов💯\n"
+            f"Лови на свой баланс {START_BONUS} бонусов💯\n"
         )
 
         if referrer_id:
-            welcome_text += "🎁 Плюс еще +50 бонусов за переход по ссылке друга!\n"
+            welcome_text += f"🎁 Плюс еще +{REFERRAL_BONUS} бонусов за переход по ссылке друга!\n"
             
         welcome_text += "В нашей системе лояльности 1 бонус = 1 рубль😊"
         
@@ -51,7 +61,7 @@ async def startt(message: types.Message, command: CommandObject):
                 # Нам нужен доступ к объекту bot, чтобы отправить сообщение другому юзеру
                 await message.bot.send_message(
                     referrer_id, 
-                    "🎉 По твоей ссылке пришел новый друг! Тебе начислено 50 бонусов."
+                    f"🎉 По твоей ссылке пришел новый друг! Тебе начислено {REFERRAL_BONUS} бонусов."
                 )
                 
             except Exception:
@@ -61,7 +71,7 @@ async def startt(message: types.Message, command: CommandObject):
 
 @user_router.message(F.text == "Поддержка")
 async def supp(message : types.Message):
-    await message.answer(f"Для связи с поддержкой пишите сюда - {uz_admina}")
+    await message.answer(f"Для связи с поддержкой пишите сюда - {UZ_ADMINA}")
 
 
 @user_router.message(F.text == "О нас")
@@ -88,13 +98,13 @@ async def about_us(message : types.Message):
 @user_router.message(F.text == "Как получать больше бонусов?")
 async def bonus_info(message: types.Message):
     text = (
-        "<b>💰 Как накопить больше бонусов?</b>\n\n"
-        "В нашем шопе действует накопительная система:\n\n"
-        "1️⃣ <b>Покупки:</b> Получайте 5% кэшбэка с каждого чека на вашу карту.\n"
-        "2️⃣ <b>Друзья:</b> Приведите друга, и получите по 100 бонусов оба после его первой покупки.\n"
-        "3️⃣ <b>Отзывы:</b> Оставьте отзыв в наших соцсетях и пришлите скриншот менеджеру — начислим 50 бонусов!\n"
-        "4️⃣ <b>Праздники:</b> В день рождения кэшбэк удваивается (10%)!\n\n"
-        "<i>* 1 бонус = 1 рубль. Бонусами можно оплатить до 30% стоимости покупки.</i>"
+        f"<b>💰 Как накопить больше бонусов?</b>\n\n"
+        f"В нашем шопе действует накопительная система:\n\n"
+        f"1️⃣ <b>Покупки:</b> Получайте 5% кэшбэка с каждого чека на вашу карту.\n"
+        f"2️⃣ <b>Друзья:</b> Приведите друга, и получите по бонусов оба после его первой покупки.\n"
+        f"3️⃣ <b>Отзывы:</b> Оставьте отзыв в наших соцсетях и пришлите скриншот менеджеру — начислим {REFERRAL_BONUS} бонусов!\n"
+        f"4️⃣ <b>Праздники:</b> В день рождения кэшбэк удваивается (10%)!\n\n"
+        f"<i>* 1 бонус = 1 рубль. Бонусами можно оплатить до 30% стоимости покупки.</i>"
     )
 
     await message.answer(text, parse_mode="HTML")
@@ -132,7 +142,7 @@ async def invite_friend(message: types.Message):
     text = (
         "<b>🤝 Программа «Приведи друга»</b>\n\n"
         "Отправь свою уникальную ссылку другу, и когда он зарегистрируется, "
-        "вы <b>оба</b> получите по 50 бонусов на баланс! 🎁\n\n"
+        f"вы <b>оба</b> получите по {REFERRAL_BONUS} бонусов на баланс! 🎁\n\n"
         f"Твоя ссылка:\n<code>{reflink}</code>\n\n"
         "<i>Нажми на ссылку, чтобы скопировать её.</i>"
     )

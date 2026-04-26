@@ -32,7 +32,7 @@ async def check_or_add_user(tg_id: int,username: str, full_name: str,referrer_id
     async with aiosqlite.connect("vape_shop.db") as db:
         cursor = await db.execute("SELECT tg_id FROM users WHERE tg_id = ?", (tg_id,))
         user = await cursor.fetchone()
-        if user: #проверку пользовалетля в БД
+        if user: #проверка пользовалетля в БД
             return False #пользователь есть
         else:
             initial_balance = 100 
