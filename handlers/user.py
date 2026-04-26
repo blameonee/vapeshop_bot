@@ -147,3 +147,23 @@ async def invite_friend(message: types.Message):
         "<i>Нажми на ссылку, чтобы скопировать её.</i>"
     )
     await message.answer(text, parse_mode="HTML")
+
+
+@user_router.message(F.text == "Виртуальная карта")
+async def virtual_card(message: types.Message):
+    user_id = message.from_user.id
+    balance = await get_user_balance(user_id)
+    status = "Клиент 💨"
+
+    if balance < (START_BONUS * 5):
+        status = "Любитель пара 🔥"    
+    text = (
+        f"<b>💳 ВАША КАРТА ЛОЯЛЬНОСТИ</b>\n"
+        f"──────────────────\n"
+        f"👤 <b>Имя:</b> {message.from_user.full_name}\n"
+        f"✨ <b>Статус:</b> {status}\n"
+        f"💰 <b>Баланс:</b> {balance} бонусов\n"
+        f"──────────────────\n"
+        f"<i>1 бонус = 1 рубль</i>"
+    )
+    await message.answer(text, parse_mode="HTML")
