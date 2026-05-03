@@ -13,6 +13,7 @@ from aiogram.types import FSInputFile
 
 
 from database import check_or_add_user
+from database import get_user_history
 
 load_dotenv()
 
@@ -23,7 +24,6 @@ REFERRAL_BONUS = int(os.getenv("REFERRAL_BONUS", 50))
 user_router = Router()
 
 users_db = []
-
 
 
 @user_router.message(CommandStart())
@@ -37,9 +37,11 @@ async def startt(message: types.Message, command: CommandObject):
             referrer_id = potential_referrer
 
     is_new_user = await check_or_add_user(
-        tg_id= message.from_user.id,
-        username= message.from_user.username,
+        tg_id=message.from_user.id,
+        username=message.from_user.username,
         full_name=message.from_user.full_name,
+        start_bonus=START_BONUS,  
+        ref_bonus=REFERRAL_BONUS, 
         referrer_id=referrer_id
     )
     if is_new_user:
@@ -47,7 +49,7 @@ async def startt(message: types.Message, command: CommandObject):
             f"Рады видеть тебя в нашем вейп-шопе💨, {message.from_user.full_name}!\n"
             f"Лови на свой баланс {START_BONUS} бонусов💯\n"
         )
-
+        
         if referrer_id:
             welcome_text += f"🎁 Плюс еще +{REFERRAL_BONUS} бонусов за переход по ссылке друга!\n"
             
@@ -76,7 +78,6 @@ async def supp(message : types.Message):
 
 @user_router.message(F.text == "О нас")
 async def about_us(message : types.Message):
-    # Используем тройные кавычки, тогда \n ставить не нужно — перенос будет там, где ты нажал Enter
     text = (
         "<b>💨 О нашем Vape Shop</b>\n\n"
         "Мы — команда энтузиастов, которые знают о паре всё!\n"
@@ -148,7 +149,7 @@ async def invite_friend(message: types.Message):
     )
     await message.answer(text, parse_mode="HTML")
 
-
+from keyboards.inline import for_card_inline
 @user_router.message(F.text == "Виртуальная карта")
 async def virtual_card(message: types.Message):
     user_id = message.from_user.id
@@ -166,4 +167,37 @@ async def virtual_card(message: types.Message):
         f"──────────────────\n"
         f"<i>1 бонус = 1 рубль</i>"
     )
-    await message.answer(text, parse_mode="HTML")
+    await message.answer(
+        text, 
+        parse_mode="HTML",
+        reply_markup=for_card_inline
+        )
+
+
+@user_router.callback_query(F.data == "show_qr")
+async def send_qr(callback: types.CallbackQuery):
+    # Здесь можно отправить картинку с QR или просто текст
+    # Для теста отправим просто уведомление
+    await callback.answer("Генерация QR-кода...", show_alert=False)
+    await callback.message.answer(f"Ваш персональный код для кассы: <code>ID{callback.from_user.id}</code>", parse_mode="HTML")
+
+
+@user_router.callback_query(F.data == "show_history")
+async def send_history(callback: types.CallbackQuery):
+    await callback.answer()
+    
+    user_id = callback.from_user.id
+    history_rows = await get_user_history(user_id)
+
+    if not history_rows:
+        await callback.message.answer("📜 Ваша история операций пока пуста.")
+        return
+
+    text = "<b>📜 Ваша история операций:</b>\n\n"
+    
+    for row in history_rows:
+        
+        operation, timestamp = row
+        text += f"▫️ {operation} <i>({timestamp[:16]})</i>\n"
+
+    await callback.message.answer(text, parse_mode="HTML")
