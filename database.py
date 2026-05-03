@@ -101,3 +101,12 @@ async def get_user_balance(tg_id: int):
         async with db.execute("SELECT balance FROM users WHERE tg_id = ?", (tg_id,)) as cursor:
             result = await cursor.fetchone()
             return result[0] if result else 0
+        
+
+async def update_user_balance(tg_id: int, amount: int):
+    async with aiosqlite.connect("vape_shop.db") as db:
+        await db.execute(
+            "UPDATE users SET balance = balance + ? WHERE tg+id = ?",
+        )
+        await db.commit()
+        
