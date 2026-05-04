@@ -19,6 +19,7 @@ from aiogram.types import FSInputFile
 
 from database import check_or_add_user
 from database import get_user_history
+from database import update_user_balance, add_history_item
 
 load_dotenv()
 
@@ -282,3 +283,52 @@ async def send_qr(callback: types.CallbackQuery):
         ),
         parse_mode="HTML"
     )
+
+
+@user_router.callback_query(F.data.startswith("add_") | F.data.startswith("sub_"))
+async def handle_admin_buttons(callback: types.CallbackQuery):
+    if callback.from_user.id != ADMIN_ID:
+        await callback.answer("У вас нет прав администратора!", show_alert=True)
+        return
+    data_parts = callback.data.split("_")
+    action = data_parts[0]  # add или sub
+    amount = int(data_parts[1])
+    target_id = int(data_parts[2])
+
+    change = amount if action == "add" else -amount
+    try:
+        # 3. Обновляем баланс в БД
+        await update_user_balance(target_id, change)
+        
+        # 4. Добавляем запись в историю клиента
+        sign = "+" if action == "add" else "-"
+        history_msg = f"💳 Админ ({callback.from_user.first_name}): {sign}{amount} бонусов"
+        await add_history_item(target_id, history_msg)
+
+        # 5. Отвечаем админу
+        await callback.answer(f"Успешно: {sign}{amount} бонусов", show_alert=True)
+        
+        # Обновляем сообщение админа, чтобы он видел, что действие выполнено
+        await callback.message.edit_text(
+            f"✅ <b>Операция выполнена!</b>\n\n"
+            f"Пользователь: <code>{target_id}</code>\n"
+            f"Изменение: <b>{sign}{amount}</b>\n\n"
+            f"Баланс в базе данных обновлен.",
+            parse_mode="HTML"
+        )
+
+        # 6. Уведомляем клиента (если он не заблокировал бота)
+        try:
+            notification = "🎁 Вам начислено" if action == "add" else "📉 Списано"
+            await callback.bot.send_message(
+                target_id, 
+                f"{notification} <b>{amount}</b> бонусов!\n"
+                f"Проверьте баланс в разделе «Виртуальная карта».",
+                parse_mode="HTML"
+            )
+        except Exception:
+            pass # Юзер мог заблокировать бота, это не должно ронять админку
+
+    except Exception as e:
+        print(f"ОШИБКА АДМИНКИ: {e}")
+        await callback.answer("Ошибка при обновлении базы данных", show_alert=True)
